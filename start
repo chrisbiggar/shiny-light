@@ -1,0 +1,7 @@
+EDITOR_ARG="editor"
+
+if [ "$1" == "$EDITOR_ARG" ]; then
+	python2 2dgame.py --editor --debug --showfps
+else
+	python2 2dgame.py --debug --showfps
+fi
