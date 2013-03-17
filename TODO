@@ -5,3 +5,5 @@
 ---------------
 
 
+- start script is not portable.
+- factor out loggable.

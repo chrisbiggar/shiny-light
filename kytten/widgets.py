@@ -16,7 +16,7 @@ import pyglet
 from pyglet import gl
 from override import KyttenLabel
 
-class Widget:
+class Widget(object):
     """
     The base of all Kytten GUI elements.  Widgets correspond to areas on the
     screen and may (in the form of Controls) respond to user input.

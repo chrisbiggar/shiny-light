@@ -7,13 +7,13 @@ from py2d import director
 from py2d import actor
 from py2d import scene
 import pyglet
-import player
+import avatar
 
 
 class Game(object):
 	def __init__(self, options):
 		self.director = director.Director(options.showfps)
-		thePlayer = player.Player(self.director)
+		thePlayer = avatar.Avatar(self.director)
 		thePlayer.set_position(100,800)
 
 		scene = py2d.scene.Scene("level")

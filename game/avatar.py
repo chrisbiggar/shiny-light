@@ -76,7 +76,7 @@ class Avatar(py2d.actor.PhysicalActor):
 
 	def set_position(self,x,y):
 		self.body.position = x,y
-		super(Player, self).set_position(x,y)
+		super(Avatar, self).set_position(x,y)
 
 
 	def update(self, dt):

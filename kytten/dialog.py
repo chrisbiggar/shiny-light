@@ -10,6 +10,7 @@ from frame import Wrapper, Frame
 from layout import GetRelativePoint, ANCHOR_CENTER
 from layout import VerticalLayout, HorizontalLayout
 
+
 class DialogEventManager(Control):
     def __init__(self):
         """

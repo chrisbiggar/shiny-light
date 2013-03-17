@@ -1,5 +1,7 @@
 #common classes and defines
 
+#TODO factor this out.
+
 import logging
 import sys
 

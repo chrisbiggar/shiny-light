@@ -167,6 +167,7 @@ class Frame(Wrapper):
             else:
                 group = dialog.panel_group
             template = dialog.theme[self.path][self.image_name]
+            #print self.path
             self.frame = template.generate(
                 dialog.theme[self.path]['gui_color'],
                 dialog.batch,

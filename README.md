@@ -1,12 +1,13 @@
 # 2d Modern Platform Game System
 
+
 2d platform game prototyping system with editor. 
 written in python.
 To run use script titled start in project root directory.
 
 2013, Chris Biggar - chrisbggr@gmail.com, BSD 3-Clause License
 Homepage: https://github.com/chrisbiggar/shiny-light/
-
+version: 0.01
 
 ## Requirements
 

@@ -8,11 +8,12 @@ from override import KyttenInputLabel
 class Input(Control):
     """A text input field."""
     def __init__(self, id=None, text="", length=20, max_length=None, padding=0,
-                 on_input=None, disabled=False):
+                 abs_width=0, on_input=None, disabled=False):
         Control.__init__(self, id=id, disabled=disabled)
         self.text = text
         self.length = length
         self.max_length = max_length
+        self.abs_width = abs_width
         self.padding = padding
         self.on_input = on_input
         self.document = pyglet.text.document.UnformattedDocument(text)
@@ -183,7 +184,10 @@ class Input(Control):
         height = font.ascent - font.descent
         glyphs = font.get_glyphs('A_')
         width = max([x.width for x in glyphs])
-        needed_width = self.length * width + 2 * self.padding
+        if self.abs_width == 0:
+            needed_width = self.length * width + 2 * self.padding
+        else:
+            needed_width = self.abs_width
         needed_height = height + 2 * self.padding
 
         if self.is_focus():

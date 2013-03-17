@@ -339,125 +339,125 @@ class Theme(ScopedDict):
     """
     def __init__(self, arg, override={}, default=DEFAULT_THEME_SETTINGS,
 		 allow_empty_theme=False, name='theme.json'):
-	"""
-	Creates a new Theme.
+	    """
+	    Creates a new Theme.
 
-	@param arg The initializer for Theme.  May be:
-	    * another Theme - we'll use the same graphic library but
-	                      apply an override for its dictionary.
-	    * a dictionary - interpret any subdirectories where the key
-			     begins with 'image' as a GraphicElementTemplate
-	    * a filename - read the JSON file as a dictionary
-	@param override Replace some dictionary entries with these
-	@param default Initial dictionary entries before handling input
-	@param allow_empty_theme True if we should allow creating a new theme
-	"""
-	ScopedDict.__init__(self, default, None)
+	    @param arg The initializer for Theme.  May be:
+	        * another Theme - we'll use the same graphic library but
+	                          apply an override for its dictionary.
+	        * a dictionary - interpret any subdirectories where the key
+			         begins with 'image' as a GraphicElementTemplate
+	        * a filename - read the JSON file as a dictionary
+	    @param override Replace some dictionary entries with these
+	    @param default Initial dictionary entries before handling input
+	    @param allow_empty_theme True if we should allow creating a new theme
+	    """
+	    ScopedDict.__init__(self, default, None)
 
-	self.groups = {}
+	    self.groups = {}
 
-	if isinstance(arg, Theme):
-	    self.textures = arg.textures
-	    for k, v in arg.iteritems():
-		self.__setitem__(k, v)
-	    self.update(override)
-	    return
+	    if isinstance(arg, Theme):
+	        self.textures = arg.textures
+	        for k, v in arg.iteritems():
+		    self.__setitem__(k, v)
+	        self.update(override)
+	        return
 
-	if isinstance(arg, dict):
-	    self.loader = pyglet.resource.Loader(os.getcwd())
-	    input = arg
-	else:
-	    if os.path.isfile(arg) or os.path.isdir(arg):
-		self.loader = pyglet.resource.Loader(path=arg)
-		try:
-		    theme_file = self.loader.file(name)
-		    input = json_load(theme_file.read())
-		    theme_file.close()
-		except pyglet.resource.ResourceNotFoundException:
-		    input = {}
+	    if isinstance(arg, dict):
+	        self.loader = pyglet.resource.Loader(os.getcwd())
+	        input = arg
 	    else:
-		input = {}
+	        if os.path.isfile(arg) or os.path.isdir(arg):
+		    self.loader = pyglet.resource.Loader(path=arg)
+		    try:
+		        theme_file = self.loader.file(name)
+		        input = json_load(theme_file.read())
+		        theme_file.close()
+		    except pyglet.resource.ResourceNotFoundException:
+		        input = {}
+	        else:
+		    input = {}
 
-	self.textures = {}
-	self._update_with_images(self, input)
-	self.update(override)
+	    self.textures = {}
+	    self._update_with_images(self, input)
+	    self.update(override)
 
     def __getitem__(self, key):
-	try:
-	    return ScopedDict.__getitem__(self, key)
-	except KeyError, e:
-	    if key.startswith('image'):
-		return UndefinedGraphicElementTemplate(self)
-	    else:
-		raise e
+	    try:
+	        return ScopedDict.__getitem__(self, key)
+	    except KeyError, e:
+	        if key.startswith('image'):
+		    return UndefinedGraphicElementTemplate(self)
+	        else:
+		    raise e
 
     def _get_texture(self, filename):
-	"""
-	Returns the texture associated with a filename.  Loads it from
-	resources if we haven't previously fetched it.
+	    """
+	    Returns the texture associated with a filename.  Loads it from
+	    resources if we haven't previously fetched it.
 
-	@param filename The filename of the texture
-	"""
-	if not self.textures.has_key(filename):
-	    texture = self.loader.texture(filename)
-	    texture.src = filename
-	    self.textures[filename] = texture
-	return self.textures[filename]
+	    @param filename The filename of the texture
+	    """
+	    if not self.textures.has_key(filename):
+	        texture = self.loader.texture(filename)
+	        texture.src = filename
+	        self.textures[filename] = texture
+	    return self.textures[filename]
 
     def _get_texture_region(self, filename, x, y, width, height):
-	"""
-	Returns a texture region.
+	    """
+	    Returns a texture region.
 
-	@param filename The filename of the texture
-	@param x X coordinate of lower left corner of region
-	@param y Y coordinate of lower left corner of region
-	@param width Width of region
-	@param height Height of region
-	"""
-	texture = self._get_texture(filename)
-	retval = texture.get_region(x, y, width, height).get_texture()
-	retval.src = texture.src
-	retval.region = [x, y, width, height]
-	return retval
+	    @param filename The filename of the texture
+	    @param x X coordinate of lower left corner of region
+	    @param y Y coordinate of lower left corner of region
+	    @param width Width of region
+	    @param height Height of region
+	    """
+	    texture = self._get_texture(filename)
+	    retval = texture.get_region(x, y, width, height).get_texture()
+	    retval.src = texture.src
+	    retval.region = [x, y, width, height]
+	    return retval
 
     def _update_with_images(self, target, input):
-	"""
-	Update a ScopedDict with the input dictionary.  Translate
-	images into texture templates.
+	    """
+	    Update a ScopedDict with the input dictionary.  Translate
+	    images into texture templates.
 
-	@param target The ScopedDict which is to be populated
-	@param input The input dictionary
-	"""
-	for k, v in input.iteritems():
-	    if k.startswith('image'):
-		if isinstance(v, dict):
-		    width = height = None
-		    if v.has_key('region'):
-			x, y, width, height = v['region']
-			texture = self._get_texture_region(
-				v['src'], x, y, width, height)
+	    @param target The ScopedDict which is to be populated
+	    @param input The input dictionary
+	    """
+	    for k, v in input.iteritems():
+	        if k.startswith('image'):
+		    if isinstance(v, dict):
+		        width = height = None
+		        if v.has_key('region'):
+			    x, y, width, height = v['region']
+			    texture = self._get_texture_region(
+				    v['src'], x, y, width, height)
+		        else:
+			    texture = self._get_texture(v['src'])
+		        if v.has_key('stretch'):
+			    target[k] = FrameTextureGraphicElementTemplate(
+			        self,
+			        texture,
+			        v['stretch'],
+			        v.get('padding', [0, 0, 0, 0]),
+			    width=width, height=height)
+		        else:
+			    target[k] = TextureGraphicElementTemplate(
+			        self, texture, width=width, height=height)
 		    else:
-			texture = self._get_texture(v['src'])
-		    if v.has_key('stretch'):
-			target[k] = FrameTextureGraphicElementTemplate(
-			    self,
-			    texture,
-			    v['stretch'],
-			    v.get('padding', [0, 0, 0, 0]),
-			width=width, height=height)
-		    else:
-			target[k] = TextureGraphicElementTemplate(
-			    self, texture, width=width, height=height)
-		else:
-		    target[k] = TextureGraphicElementTemplate(
-			self, self._get_texture(v))
-	    elif isinstance(v, dict):
-		temp = ScopedDict(parent=target)
-		self._update_with_images(temp, v)
-		target[k] = temp
-	    else:
-		target[k] = v
+		        target[k] = TextureGraphicElementTemplate(
+			    self, self._get_texture(v))
+	        elif isinstance(v, dict):
+		    temp = ScopedDict(parent=target)
+		    self._update_with_images(temp, v)
+		    target[k] = temp
+	        else:
+		    target[k] = v
 
     def write(self, f, indent=0):
-	ScopedDict.write(self, f, indent)
-	f.write('\n')
+        ScopedDict.write(self, f, indent)
+        f.write('\n')
