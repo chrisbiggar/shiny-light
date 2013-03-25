@@ -37,7 +37,7 @@ class LevelEditor(pyglet.window.Window):
     def createDialogs(self):
         self.register_event_type('on_update') # kytten dialogs get updated with this event
         self.register_event_type('on_layer_update') # update layer info
-        self.editorDialog = dialogs.EditorDialog(self)
+        self.MainDialog = dialogs.MainDialog(self)
         self.statusPane = dialogs.StatusPane(self, self.dialogBatch, self.sceneController)
         self.layerDialog = dialogs.LayerDialog(self)
         self.selectedItemDialog = dialogs.SelectedItemDialog(self)
@@ -46,7 +46,7 @@ class LevelEditor(pyglet.window.Window):
 
 
     def on_close(self):
-        if self.sceneController.map != None and self.sceneController.edited == True:
+        if self.sceneController.graph != None and self.sceneController.edited == True:
             ''' if map is open and not saved prompt user
             '''
             dialogs.ConfirmExitDialog(self, self.dialogBatch, self.sceneController)

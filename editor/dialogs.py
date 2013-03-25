@@ -1,5 +1,5 @@
 '''
-MainDialog control panel for leveleditor.
+Editor Dialogs
 
 '''
 import os
@@ -8,7 +8,6 @@ import kytten
 from kytten.dialog import Dialog
 from kytten.button import Button
 import widgets
-import levelview
 import py2d.scenegraph as scenegraph
 
 
@@ -81,7 +80,7 @@ class EditLayerDialog(Dialog):
             kytten.Frame(
                 kytten.VerticalLayout([
                     kytten.GridLayout([
-                        [visible, kytten.Button("Delete",
+                        [self.visible, kytten.Button("Delete",
                                          on_click=self.on_click_delete_button)],
                         [kytten.VerticalLayout([
                             kytten.Label("Opacity"),
@@ -105,7 +104,7 @@ class EditLayerDialog(Dialog):
     def entity_list(self):
         pass
     
-    def opacity_on_set(self):
+    def opacity_on_set(self, value):
         pass
     
     def on_click_delete_button(self):
@@ -123,15 +122,15 @@ class EditLayerDialog(Dialog):
         on_escape(self)
 
 '''
-    class EditorDialog
+    class MainDialog
     main dialog for application. allows layer navigation and map loading/saving
 '''
-class EditorDialog(Dialog):
+class MainDialog(Dialog):
     lastLayerChoice = None
     def __init__(self, editor):
         self.scene = editor.sceneController
         frame = self.createLayout()
-        super(EditorDialog, self).__init__(frame,
+        super(MainDialog, self).__init__(frame,
             window=editor, batch=editor.dialogBatch, 
             anchor=kytten.ANCHOR_TOP_RIGHT, theme=theme)
         
@@ -141,6 +140,8 @@ class EditorDialog(Dialog):
         for key in keys:
             options.append(key)
         self.layerMenu.set_options(options)
+        self.metaLayerMenu.set_options(['add layer', 'edit layer', 'source dir'])
+        
         
     def layerMenuSelect(self, choice):
         # unselect active layer if clicked
@@ -166,6 +167,9 @@ class EditorDialog(Dialog):
                 self.layerMenu.options[self.layerMenu.selected].unselect()'''
         elif choice == "edit layer":
             EditLayerDialog(self.window, self.batch, self.scene)
+        elif choice == "source dir":
+            SourceDirectoryDialog(self.window, self.batch, self.scene)
+
              
     def createLayout(self):
         # layers section
@@ -173,8 +177,8 @@ class EditorDialog(Dialog):
         layersSection = kytten.FoldingSection("Layers", kytten.VerticalLayout([self.layerMenu]))
         #
         # layers section
-        self.metaLayerMenu = widgets.ClickMenu(['add layer', 'edit layer'], on_select=self.metaLayerMenuSelect)
-        
+        self.metaLayerMenu = widgets.ClickMenu(['-add layer', '-edit layer', '-source dir'], on_select=self.metaLayerMenuSelect)
+
         # map section
         mapSection = kytten.FoldingSection("Map", 
             widgets.ClickMenu(
@@ -258,8 +262,7 @@ class LayerDialog(object):
             
     def on_item_select(self, item):
         self.selectedItemLabel.set_text(item)
-        #TODO correct this path.
-        path = os.path.join("graphics/scene/visuals/", item)
+        path = os.path.join(self.scene.graph.sourcePath, self.scene.currentLayer.dir, item)
         self.selectedItemImage.setImage(pyglet.image.load(path))
         
         self.scene.tools['placeitem'].setSelectedItem(path)
@@ -361,6 +364,7 @@ class LayerDialog(object):
 '''
 class SelectItemDialog(Dialog):
     def __init__(self, window, currentLayer, layerDialog):
+        self.scene = window.sceneController
         self.layerDialog = layerDialog
         layout = self.createLayout(currentLayer)
         super(SelectItemDialog, self).__init__(
@@ -370,25 +374,24 @@ class SelectItemDialog(Dialog):
                 on_enter=self.on_enter, on_escape=on_escape)
                 
     def createLayout(self, currentLayer):
-        folderName = None
-        if(isinstance(currentLayer,scenegraph.ObjectLayer)):
-            folderName = "objects"
-        elif(isinstance(currentLayer,scenegraph.AestheticLayer)):
-            folderName = "visuals"
         '''
         build list of items with name and image
         '''
-        path = os.path.join("graphics/scene",folderName)
+        path = os.path.join(self.scene.graph.sourcePath, currentLayer.dir)
         items = list()
         for (path, dirs, files) in os.walk(path):
             for file in files:
                 if file.endswith(".png"):
                     items.append([file, pyglet.image.load(os.path.join(path, file))])
+        
+        if len(items) == 0:
+            itemsMenu = kytten.Label("No Items Found")
+        else:
+             itemsMenu = kytten.Scrollable(widgets.ItemMenu(items, on_select=self.layerDialog.on_item_select),
+                    height=600)
                 
         return kytten.VerticalLayout([
-            kytten.Scrollable(
-                widgets.ItemMenu(items, on_select=self.layerDialog.on_item_select),
-                height=600),
+            itemsMenu,
             kytten.SectionHeader("", align=kytten.HALIGN_LEFT),
             kytten.HorizontalLayout([
                 Button("Cancel", on_click=self.cancel),
@@ -402,7 +405,40 @@ class SelectItemDialog(Dialog):
     def on_enter(self, dialog):
         on_escape(self)
 
-
+'''
+    SourceDirectoryDialog
+'''
+class SourceDirectoryDialog(Dialog):
+    def __init__(self, window, batch, scene):
+        self.scene = scene
+        currentPath = self.scene.graph.sourcePath
+        super(SourceDirectoryDialog, self).__init__(
+            kytten.Frame(kytten.VerticalLayout([
+                kytten.Label("Source"),
+                kytten.HorizontalLayout([
+                    kytten.Input("source", currentPath,  max_length=20)
+                ]),
+                kytten.Spacer(height=20),
+                kytten.HorizontalLayout([
+                     kytten.Button("Ok",
+                         on_click=self.on_submit),
+                     kytten.Button("Cancel",
+                         on_click=self.on_cancel)])
+            ])),
+            window=window, batch=batch,
+            anchor=kytten.ANCHOR_CENTER, theme=theme,
+            on_enter=self.on_enter, on_escape=on_escape)
+                
+    def on_submit(self):
+        values = self.get_values()
+        self.scene.graph.sourcePath = values['source']
+        on_escape(self)
+    
+    def on_enter(self, dialog):
+        on_submit()
+    
+    def on_cancel(self):
+        on_escape(self)
 
 '''
     class SelectedItemDialog
@@ -418,7 +454,6 @@ class SelectedItemDialog(object):
         self.updateItem()
         
     def on_select_item(self):
-        print "select"
         item = self.scene.tools["select"].selectedItem
         self.updateItem(item)
         

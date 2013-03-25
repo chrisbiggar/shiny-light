@@ -69,7 +69,7 @@ class PanTool(BaseTool):
 
           
 '''
-    LineTool
+    PlotLineTool
     allows user to place a line in the terrain layer. 
 '''      
 #TODO recode this removing "line preview" and adding to batch in tool itself.
@@ -83,6 +83,7 @@ class PlotLineTool(BaseTool):
     linePreview = None
     mousePoint = (0,0)
     snapMode = False
+    
     def __init__(self, scene):
     	super(PlotLineTool, self).__init__(scene)
     	
@@ -199,7 +200,7 @@ class PlaceItemTool(BaseTool):
 
     def on_mouse_release(self, x, y, button, modifiers):
         if self.preview is not None and self.active is True:
-            self.scene.currentLayer.addItem(self.selectedName, (x,y))
+            self.scene.currentLayer.addItem(self.scene.graph.sourcePath, self.selectedName, (x,y))
         
         
 '''

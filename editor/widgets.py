@@ -14,8 +14,6 @@ from kytten.layout import HALIGN_CENTER
 from kytten.layout import VALIGN_TOP, VALIGN_CENTER, VALIGN_BOTTOM
 
 
-#TODO tidy up palettemenu classes.
-
 
 '''
     Image Widget

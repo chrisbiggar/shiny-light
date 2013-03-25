@@ -55,14 +55,15 @@ class Visual(object):
 class AestheticLayer(BaseLayer):
     items = list()
     group = OrderedGroup(DrawZPos.FOREGROUND)
-    path = "graphics/scene/visuals"
+    dir = 'visuals'
+    sources = list()
     
     def __init__(self, batch):
         self.batch = batch
         
-    def addItem(self, item, (x,y)):
-        item = item + ".png"
-        img = pyglet.image.load(os.path.join(self.path, item))
+    def addItem(self, path, item, (x,y)):
+        file = item + ".png"
+        img = pyglet.image.load(os.path.join(path, self.dir, file))
         sprite = pyglet.sprite.Sprite(img, batch=self.batch, group=self.group)
         sprite.x = x
         sprite.y = y
@@ -82,8 +83,12 @@ class AestheticLayer(BaseLayer):
     Object Layer
 '''
 class Object(object):
-    def __init__(self):
-        pass
+    
+    def __init__(self, name, sprite, (x,y)):
+        self.name = name
+        self.sprite = sprite
+        self.x = y
+        self.y = x
         
     '''
         doesPointIntersect()
@@ -95,12 +100,18 @@ class Object(object):
 class ObjectLayer(BaseLayer):
     items = list()
     group = OrderedGroup(DrawZPos.FOREGROUND)
+    dir = 'objects'
     
     def __init__(self, batch):
         self.batch = batch
         
-    def addItem(self, itemName, x, y):
-        pass
+    def addItem(self, path, item, (x,y)):
+        file = item + ".png"
+        img = pyglet.image.load(os.path.join(path, self.dir, file))
+        sprite = pyglet.sprite.Sprite(img, batch=self.batch, group=self.group)
+        sprite.x = x
+        sprite.y = y
+        self.items.append(Object(item, sprite, (x,y)))
         
     def isPointOverItem(self, point, threshold):
         pass
@@ -227,6 +238,7 @@ class SceneGraph(object):
         self.focusX, self.focusY = 0, 0
         self.viewportWidth, self.viewportHeight = viewportSize
         self.backColour = [0.,0.,0.]
+        self.sourcePath = 'lvl/alpha'
         # layers:
         self.layers = Layers()
         self.layers.addNamed(AestheticLayer(self.batch), "foreground")
