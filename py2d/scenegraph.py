@@ -253,6 +253,7 @@ class SceneGraph(object):
         print "save: " + fileName
         
         
+        
     def moveFocus(self, x=0, y=0):
         self.setFocus(self.focusX + x, self.focusY + y)
         

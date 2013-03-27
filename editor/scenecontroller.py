@@ -191,7 +191,9 @@ class PlaceItemTool(BaseTool):
                 group=self.scene.currentLayer.group)
         if self.active == False:
             self.preview.visible = False
-        
+            
+    def key_press(self, symbol, modifiers):
+        print "press"
     
     def on_mouse_motion(self, x, y, dx, dy):
         if self.preview is not None and self.active is True:
