@@ -22,7 +22,97 @@ theme = kytten.Theme(os.path.join(os.getcwd(), 'theme'), override={
 '''
 def on_escape(dialog):
     dialog.teardown()
+
+'''
+    class MainDialog
+    main dialog for application. allows layer navigation and map loading/saving
+'''
+class MainDialog(Dialog):
+    lastLayerChoice = None
+    def __init__(self, editor):
+        self.scene = editor.sceneController
+        frame = self.createLayout()
+        super(MainDialog, self).__init__(frame,
+            window=editor, batch=editor.dialogBatch, 
+            anchor=kytten.ANCHOR_TOP_RIGHT, theme=theme)
+        
+    def syncLayerMenu(self):
+        options = list()
+        keys = self.scene.graph.layers.by_name.iterkeys()
+        for key in keys:
+            options.append(key)
+        self.layerMenu.set_options(options)
+        self.metaLayerMenu.set_options(['add layer', 'edit layer', 'source dir'])
+        
+        
+    def layerMenuSelect(self, choice):
+        # unselect active layer if clicked
+        if choice == self.lastLayerChoice:
+            self.layerMenu.options[choice].unselect()
+            self.scene.setActiveLayer("none")
+            self.lastLayerChoice = None
+        else:
+            self.scene.setActiveLayer(choice)
+            self.lastLayerChoice = choice
+        self.window.dispatch_event('on_layer_update')
+        if self.window.selectedItemDialog.dialog != None:
+            self.window.selectedItemDialog.dialog.teardown()
     
+    def metaLayerMenuSelect(self, choice):
+        if choice == "add layer":
+            print "add"
+            '''# add layer to LevelView
+            self.scene.addAestheticLayer("layer" + str(self.scene.layers))
+            self.syncLayerMenu()
+            # unselect new layer button
+            if self.layerMenu.selected is not None:
+                self.layerMenu.options[self.layerMenu.selected].unselect()'''
+        elif choice == "edit layer":
+            EditLayerDialog(self.window, self.batch, self.scene)
+        elif choice == "source dir":
+            SourceDirectoryDialog(self.window, self.batch, self.scene)
+
+             
+    def createLayout(self):
+        # layers section
+        self.layerMenu = kytten.Menu(options=[], on_select=self.layerMenuSelect)
+        layersSection = kytten.FoldingSection("Layers", kytten.VerticalLayout([self.layerMenu]))
+        #
+        # layers section
+        self.metaLayerMenu = widgets.ClickMenu(['-add layer', '-edit layer', '-source dir'], on_select=self.metaLayerMenuSelect)
+
+        # map section
+        mapSection = kytten.FoldingSection("Map", 
+            widgets.ClickMenu(
+                options=["New Level", "Load Level", "Save Level", "Quit"], 
+                on_select=self.mapMenuSelect),
+                )
+        return kytten.Frame(kytten.VerticalLayout([layersSection, self.metaLayerMenu, mapSection]))
+   
+    def mapMenuSelect(self, choice):
+        if choice == "New Level":
+            NewLevelDialog(self, self.window, self.batch, self.scene)
+        elif choice == "Load Level":
+            def on_select(filename):
+                self.scene.loadMap(filename)
+                on_escape(dialog)
+            dialog = kytten.FileLoadDialog(
+                        extensions=[self.scene.graph.FILE_EXT], window=self.window, 
+                        theme=self.theme,
+                        on_select=on_select, batch=self.batch,
+                        on_escape=on_escape,)
+        elif choice == "Save Level":
+            #def on_select(filename):
+            self.scene.graph.saveMapToFile("test.lvl")
+                #self.scene.saveMap(filename)
+                #on_escape(dialog)
+            '''dialog = kytten.FileSaveDialog(
+                extensions=[self.scene.graph.FILE_EXT], window=self.window,
+                batch=self.batch, anchor=kytten.ANCHOR_CENTER,
+                theme=self.theme, on_escape=on_escape, on_select=on_select)'''
+        elif choice == "Quit":
+            pyglet.app.exit()
+            
 '''
     NewLevelDialog
     allows user to create new level specifying properties
@@ -120,95 +210,42 @@ class EditLayerDialog(Dialog):
         on_submit()
     def on_cancel(self):
         on_escape(self)
-
+            
+            
 '''
-    class MainDialog
-    main dialog for application. allows layer navigation and map loading/saving
+    SourceDirectoryDialog
 '''
-class MainDialog(Dialog):
-    lastLayerChoice = None
-    def __init__(self, editor):
-        self.scene = editor.sceneController
-        frame = self.createLayout()
-        super(MainDialog, self).__init__(frame,
-            window=editor, batch=editor.dialogBatch, 
-            anchor=kytten.ANCHOR_TOP_RIGHT, theme=theme)
-        
-    def syncLayerMenu(self):
-        options = list()
-        keys = self.scene.graph.layers.by_name.iterkeys()
-        for key in keys:
-            options.append(key)
-        self.layerMenu.set_options(options)
-        self.metaLayerMenu.set_options(['add layer', 'edit layer', 'source dir'])
-        
-        
-    def layerMenuSelect(self, choice):
-        # unselect active layer if clicked
-        if choice == self.lastLayerChoice:
-            self.layerMenu.options[choice].unselect()
-            self.scene.setActiveLayer("none")
-            self.lastLayerChoice = None
-        else:
-            self.scene.setActiveLayer(choice)
-            self.lastLayerChoice = choice
-        self.window.dispatch_event('on_layer_update')
-        if self.window.selectedItemDialog.dialog != None:
-            self.window.selectedItemDialog.dialog.teardown()
+class SourceDirectoryDialog(Dialog):
+    def __init__(self, window, batch, scene):
+        self.scene = scene
+        currentPath = self.scene.graph.sourcePath
+        super(SourceDirectoryDialog, self).__init__(
+            kytten.Frame(kytten.VerticalLayout([
+                kytten.Label("Source"),
+                kytten.HorizontalLayout([
+                    kytten.Input("source", currentPath,  max_length=20)
+                ]),
+                kytten.Spacer(height=20),
+                kytten.HorizontalLayout([
+                     kytten.Button("Ok",
+                         on_click=self.on_submit),
+                     kytten.Button("Cancel",
+                         on_click=self.on_cancel)])
+            ])),
+            window=window, batch=batch,
+            anchor=kytten.ANCHOR_CENTER, theme=theme,
+            on_enter=self.on_enter, on_escape=on_escape)
+                
+    def on_submit(self):
+        values = self.get_values()
+        self.scene.graph.sourcePath = values['source']
+        on_escape(self)
     
-    def metaLayerMenuSelect(self, choice):
-        if choice == "add layer":
-            print "add"
-            '''# add layer to LevelView
-            self.scene.addAestheticLayer("layer" + str(self.scene.layers))
-            self.syncLayerMenu()
-            # unselect new layer button
-            if self.layerMenu.selected is not None:
-                self.layerMenu.options[self.layerMenu.selected].unselect()'''
-        elif choice == "edit layer":
-            EditLayerDialog(self.window, self.batch, self.scene)
-        elif choice == "source dir":
-            SourceDirectoryDialog(self.window, self.batch, self.scene)
-
-             
-    def createLayout(self):
-        # layers section
-        self.layerMenu = kytten.Menu(options=[], on_select=self.layerMenuSelect)
-        layersSection = kytten.FoldingSection("Layers", kytten.VerticalLayout([self.layerMenu]))
-        #
-        # layers section
-        self.metaLayerMenu = widgets.ClickMenu(['-add layer', '-edit layer', '-source dir'], on_select=self.metaLayerMenuSelect)
-
-        # map section
-        mapSection = kytten.FoldingSection("Map", 
-            widgets.ClickMenu(
-                options=["New Level", "Load Level", "Save Level", "Quit"], 
-                on_select=self.mapMenuSelect),
-                )
-        return kytten.Frame(kytten.VerticalLayout([layersSection, self.metaLayerMenu, mapSection]))
-   
-    def mapMenuSelect(self, choice):
-        if choice == "New Level":
-            NewLevelDialog(self, self.window, self.batch, self.scene)
-        elif choice == "Load Level":
-            def on_select(filename):
-                self.scene.loadMap(filename)
-                on_escape(dialog)
-            dialog = kytten.FileLoadDialog(
-                        extensions=[levelview.FILE_EXT], window=self.window, 
-                        theme=self.theme,
-                        on_select=on_select, batch=self.batch,
-                        on_escape=on_escape,)
-        elif choice == "Save Level":
-            def on_select(filename):
-                self.scene.saveMap(filename)
-                on_escape(dialog)
-            dialog = kytten.FileSaveDialog(
-                extensions=[levelview.FILE_EXT], window=self.window,
-                batch=self.batch, anchor=kytten.ANCHOR_CENTER,
-                theme=self.theme, on_escape=on_escape, on_select=on_select)   
-        elif choice == "Quit":
-            pyglet.app.exit()
+    def on_enter(self, dialog):
+        on_submit()
+    
+    def on_cancel(self):
+        on_escape(self)
             
             
 '''
@@ -358,6 +395,7 @@ class LayerDialog(object):
             kytten.Button("Select Item", on_click=on_select_item)
         ])
         
+
 '''
     class SelectItemDialog
     allows user to select aesthetic or object item
@@ -405,40 +443,6 @@ class SelectItemDialog(Dialog):
     def on_enter(self, dialog):
         on_escape(self)
 
-'''
-    SourceDirectoryDialog
-'''
-class SourceDirectoryDialog(Dialog):
-    def __init__(self, window, batch, scene):
-        self.scene = scene
-        currentPath = self.scene.graph.sourcePath
-        super(SourceDirectoryDialog, self).__init__(
-            kytten.Frame(kytten.VerticalLayout([
-                kytten.Label("Source"),
-                kytten.HorizontalLayout([
-                    kytten.Input("source", currentPath,  max_length=20)
-                ]),
-                kytten.Spacer(height=20),
-                kytten.HorizontalLayout([
-                     kytten.Button("Ok",
-                         on_click=self.on_submit),
-                     kytten.Button("Cancel",
-                         on_click=self.on_cancel)])
-            ])),
-            window=window, batch=batch,
-            anchor=kytten.ANCHOR_CENTER, theme=theme,
-            on_enter=self.on_enter, on_escape=on_escape)
-                
-    def on_submit(self):
-        values = self.get_values()
-        self.scene.graph.sourcePath = values['source']
-        on_escape(self)
-    
-    def on_enter(self, dialog):
-        on_submit()
-    
-    def on_cancel(self):
-        on_escape(self)
 
 '''
     class SelectedItemDialog
@@ -478,49 +482,6 @@ class SelectedItemDialog(object):
                 window=self.window, batch=self.window.dialogBatch,
                 anchor=kytten.ANCHOR_BOTTOM_LEFT, theme=theme)
             
-        
-'''
-    GridOptionsDialog
-    shows editable grid options.
-'''
-class GridOptionsDialog(Dialog):
-    def __init__(self, window, batch, scene):
-        self.scene = scene
-        super(GridOptionsDialog, self).__init__(
-            kytten.Frame(
-                    kytten.VerticalLayout([
-                        kytten.SectionHeader("Grid Options", align=kytten.HALIGN_LEFT),
-                        kytten.Checkbox("Show Grid", id="show_grid"),
-                        kytten.Checkbox("Snap To Grid", id="snap_to"),
-                        kytten.GridLayout([
-                            [kytten.Label("H Spacing"), kytten.Input("h_spacing", "50", max_length=3)],
-                            [kytten.Label("V Spacing"), kytten.Input("v_spacing", "50", max_length=3)],
-                            [kytten.Label("H Offset"), kytten.Input("h_offset", "50", max_length=3)],
-                            [kytten.Label("V Offset"), kytten.Input("v_offset", "50", max_length=3)]
-                            ]),
-                        kytten.SectionHeader("", align=kytten.HALIGN_LEFT),
-                        kytten.HorizontalLayout([
-                             kytten.Button("Ok",
-                                 on_click=self.on_submit),
-                             kytten.Button("Cancel",
-                                 on_click=self.on_cancel)]),
-                                 ])),
-                window=window, batch=batch,
-                anchor=kytten.ANCHOR_CENTER, theme=theme,
-                on_enter=self.on_enter, on_escape=on_escape)
-                
-    def on_submit(self):
-        values = self.get_values()
-        self.scene.updateGrid(values)
-        on_escape(self)
-    
-    def on_enter(self):
-        on_submit()
-    
-    def on_cancel(self):
-        on_escape(self)
-
-
        
 
 '''
@@ -564,6 +525,48 @@ class StatusPane(Dialog):
     def on_update(self, dt):
         self.updateCoords()
         super(StatusPane, self).on_update(dt)
+
+
+'''
+    GridOptionsDialog
+    shows editable grid options.
+'''
+class GridOptionsDialog(Dialog):
+    def __init__(self, window, batch, scene):
+        self.scene = scene
+        super(GridOptionsDialog, self).__init__(
+            kytten.Frame(
+                    kytten.VerticalLayout([
+                        kytten.SectionHeader("Grid Options", align=kytten.HALIGN_LEFT),
+                        kytten.Checkbox("Show Grid", id="show_grid"),
+                        kytten.Checkbox("Snap To Grid", id="snap_to"),
+                        kytten.GridLayout([
+                            [kytten.Label("H Spacing"), kytten.Input("h_spacing", "50", max_length=3)],
+                            [kytten.Label("V Spacing"), kytten.Input("v_spacing", "50", max_length=3)],
+                            [kytten.Label("H Offset"), kytten.Input("h_offset", "50", max_length=3)],
+                            [kytten.Label("V Offset"), kytten.Input("v_offset", "50", max_length=3)]
+                            ]),
+                        kytten.SectionHeader("", align=kytten.HALIGN_LEFT),
+                        kytten.HorizontalLayout([
+                             kytten.Button("Ok",
+                                 on_click=self.on_submit),
+                             kytten.Button("Cancel",
+                                 on_click=self.on_cancel)]),
+                                 ])),
+                window=window, batch=batch,
+                anchor=kytten.ANCHOR_CENTER, theme=theme,
+                on_enter=self.on_enter, on_escape=on_escape)
+                
+    def on_submit(self):
+        values = self.get_values()
+        self.scene.updateGrid(values)
+        on_escape(self)
+    
+    def on_enter(self):
+        on_submit()
+    
+    def on_cancel(self):
+        on_escape(self)
 
         
         

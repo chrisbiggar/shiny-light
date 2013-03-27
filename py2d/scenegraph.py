@@ -187,16 +187,14 @@ class TerrainLayer(BaseLayer):
         while preview is true, line is not stored permanetely and just
         temporarly added to batch
     '''
-    def addLine(self, x1, y1, x2, y2, preview=False):
+    def addLine(self, x1, y1, x2, y2):
         vl = None
         if self.drawLines:
             vl = self.batch.add(2, pyglet.gl.GL_LINES, self.group,
                 ('v2i', (x1, y1, x2, y2)),
                 ('c3f', (self.curColor[0],self.curColor[1],self.curColor[2])*2))
         line = Line(x1, y1, x2, y2, vl)
-        if not preview:
-            self.lines.append(line)
-        return line
+        self.lines.append(line)
     
     
     '''
@@ -230,15 +228,17 @@ class Layers(list):
     sceneGraph
 '''
 class SceneGraph(object):
-    def __init__(self, viewportSize, editorMode=False):
+    FILE_EXT = 'lvl'
+
+    def __init__(self, viewportSize, width=0, height=0, editorMode=False):
         self.batch = pyglet.graphics.Batch()
         #
-        self.width = 0
-        self.height = 0
+        self.width = width
+        self.height = height
         self.focusX, self.focusY = 0, 0
         self.viewportWidth, self.viewportHeight = viewportSize
         self.backColour = [0.,0.,0.]
-        self.sourcePath = 'lvl/alpha'
+        self.sourcePath = 'assets'
         # layers:
         self.layers = Layers()
         self.layers.addNamed(AestheticLayer(self.batch), "foreground")
@@ -246,8 +246,12 @@ class SceneGraph(object):
         self.layers.addNamed(TerrainLayer(self.batch, dl=editorMode), "terrain")
         
     @classmethod
-    def fromMapFile(cls, filename, viewportSize):
+    def fromMapFile(cls, fileName, viewportSize):
         pass
+     
+    def saveMapToFile(self, fileName):
+        print "save: " + fileName
+        
         
     def moveFocus(self, x=0, y=0):
         self.setFocus(self.focusX + x, self.focusY + y)

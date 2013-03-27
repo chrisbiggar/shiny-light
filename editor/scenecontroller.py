@@ -9,8 +9,6 @@ import py2d.scenegraph as scenegraph
 from py2d.scenegraph import SceneGraph
 
 
-MAP_FILE_EXT = 'lvl'
-
 '''
     BaseTool
     abstract. base for all scene tools.
@@ -71,8 +69,7 @@ class PanTool(BaseTool):
 '''
     PlotLineTool
     allows user to place a line in the terrain layer. 
-'''      
-#TODO recode this removing "line preview" and adding to batch in tool itself.
+'''
 class Point(object):
     def __init__(self, x, y):
         self.x = x
@@ -80,9 +77,9 @@ class Point(object):
 class PlotLineTool(BaseTool):
     NAME = "Line"
     lineStart = (0,0)
-    linePreview = None
     mousePoint = (0,0)
     snapMode = False
+    preview = None
     
     def __init__(self, scene):
     	super(PlotLineTool, self).__init__(scene)
@@ -93,14 +90,21 @@ class PlotLineTool(BaseTool):
     def deactivate(self):
         pass
     
-    def preview(self, x, y):
-        if self.linePreview:
-            self.linePreview.vl.delete()
-        layer = self.scene.currentLayer
-        mousePos = self.translateMouseClick(x,y)
-        if self.lineStart == None:
-            self.lineStart = mousePos
-        self.linePreview = layer.addLine(mousePos[0], mousePos[1], self.lineStart[0], self.lineStart[1], True)
+    def doPreview(self, x2, y2):
+        if self.lineStart is None:
+            return
+        if self.preview is not None:
+            self.preview.delete()
+            self.preview = None
+        x1,y1 = self.lineStart
+        x2,y2 = self.translateMouseClick(x2,y2)
+        # create vl of line preview
+        batch = self.scene.graph.batch
+        group = self.scene.currentLayer.group
+        curColor = self.scene.currentLayer.curColor
+        self.preview = batch.add(2, pyglet.gl.GL_LINES, group,
+                ('v2i', (x1, y1, x2, y2)),
+                ('c3f', (curColor[0],curColor[1],curColor[2])*2))
             
     def closestPointToMouse(self):
         lines = self.scene.graph.layers["terrain"].lines
@@ -123,12 +127,10 @@ class PlotLineTool(BaseTool):
             if dist < closestDist:
                 closestDist = dist
                 closestPoint = point
-        if closestPoint == None:
-            return None
         return (closestPoint.x, closestPoint.y)
         
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        self.preview(x,y)
+        self.doPreview(x,y)
     
     def on_mouse_press(self, x, y, button, modifiers):
         if button == mouse.LEFT:
@@ -144,8 +146,9 @@ class PlotLineTool(BaseTool):
     def on_mouse_release(self, x, y, button, modifiers):
         if button == mouse.LEFT:
             terrain = self.scene.graph.layers['terrain']
-            if self.linePreview:
-                self.linePreview.vl.delete()
+            if self.preview is not None:
+                self.preview.delete()
+                self.preview = None
             mousePos = self.translateMouseClick(x,y)
             terrain.addLine(self.lineStart[0], self.lineStart[1], mousePos[0], mousePos[1])
             self.linePreview = None
@@ -192,14 +195,16 @@ class PlaceItemTool(BaseTool):
     
     def on_mouse_motion(self, x, y, dx, dy):
         if self.preview is not None and self.active is True:
-            self.preview.x = x
-            self.preview.y = y
+            self.preview.x, self.preview.y = self.translateMouseClick(x,y)
+            '''self.preview.x = x
+            self.preview.y = y'''
         
     def on_mouse_press(self, x, y, button, modifiers):
         pass
 
     def on_mouse_release(self, x, y, button, modifiers):
         if self.preview is not None and self.active is True:
+            x,y = self.translateMouseClick(x,y)
             self.scene.currentLayer.addItem(self.scene.graph.sourcePath, self.selectedName, (x,y))
         
         
@@ -312,17 +317,12 @@ class SceneController(object):
         
         
     def newLevel(self, width, height):
-        self.graph = SceneGraph(self.size, editorMode=True)
-        self.graph.width = width
-        self.graph.height = height
+        self.graph = SceneGraph(self.size, width, height, editorMode=True)
         self.graph.forceFocus = True
     
     def loadLevel(self, fileName):
         print "graph loaded"
         self.graph = SceneGraph.fromMapFile(fileName)
-    
-    def saveLevel(self,  fileName):
-        print "graph saved"
             
     def resize(self, width, height):
         self.size = (width, height)
