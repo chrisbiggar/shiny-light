@@ -97,6 +97,16 @@ class Widget(object):
         Returns true if the widget accepts an input and can return a value
         """
         return False
+    
+    '''
+        HACK
+        stops pyglet from raising an exception if key pressed 
+        on certain widgets that dont have on_text handler
+    '''
+    def on_text(self, text):
+        pass
+    def on_text_motion_select(self, sd):
+        pass
 
     def layout(self, x, y):
         """

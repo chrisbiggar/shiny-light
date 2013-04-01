@@ -15,5 +15,5 @@ version: 0.01
 * pyglet 1.1.4
 * pymunk 3.0.0
 
-Includes a forked version of python gui lib kytten 5.8.5
+Includes a modified version of python gui lib kytten 5.8.5
 

@@ -1,20 +1,19 @@
 '''
 map editor for py2d.
-
 '''
 import pyglet
 from pyglet.window import key
-from pyglet.gl import glViewport, glMatrixMode, glLoadIdentity,\
-	gluPerspective, gluLookAt, GL_PROJECTION, GL_MODELVIEW
+from pyglet.gl import glEnable, glViewport, glMatrixMode, glLoadIdentity, glBlendFunc, \
+	gluPerspective, gluLookAt, GL_PROJECTION, GL_MODELVIEW, GL_BLEND, \
+	GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
 import scenecontroller
 import dialogs
 
 
-'''
-Main Application Class for level editor
-
-'''
 class LevelEditor(pyglet.window.Window):
+    '''
+    Main Application Class for level editor
+    '''
     fpsDisplay = pyglet.clock.ClockDisplay()
     WINDOW_CAPTION = "Map Editor"
     
@@ -30,14 +29,15 @@ class LevelEditor(pyglet.window.Window):
         self.createDialogs()
         # time since program started.
         self.time = 0
-        #self.el = pyglet.window.event.WindowEventLogger()
-        #self.push_handlers(self.el)
     
+    def on_layer_update(self):
+        self.layerDialog.sync()
+        self.mainDialog.syncLayerMenu()
     
     def createDialogs(self):
         self.register_event_type('on_update') # kytten dialogs get updated with this event
         self.register_event_type('on_layer_update') # update layer info
-        self.MainDialog = dialogs.MainDialog(self)
+        self.mainDialog = dialogs.MainDialog(self)
         self.statusPane = dialogs.StatusPane(self, self.dialogBatch, self.sceneController)
         self.layerDialog = dialogs.LayerDialog(self)
         self.selectedItemDialog = dialogs.SelectedItemDialog(self)
@@ -54,7 +54,8 @@ class LevelEditor(pyglet.window.Window):
             super(LevelEditor, self).on_close()
         
     def on_resize(self, width, height):
-        ''' calculate perspective matrix
+        ''' 
+        calculate perspective matrix
         '''
         v_ar = width/float(height)
         usableWidth = int(min(width, height*v_ar))

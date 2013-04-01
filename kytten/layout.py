@@ -107,7 +107,8 @@ class VerticalLayout(Widget):
         @param item The Widget to be added
         """
         self.content.append(item or Spacer())
-        self.saved_dialog.set_needs_layout()
+        if self.saved_dialog is not None:
+            self.saved_dialog.set_needs_layout()
 
     def delete(self):
         """Deletes all graphic elements within the layout."""

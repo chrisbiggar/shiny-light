@@ -4,7 +4,7 @@ Implementation of scene controller and scene manipulation tools.
 import pyglet
 from pyglet.window import mouse, key
 from pyglet.gl import glPopMatrix, glPushMatrix, \
-    glScalef, glClearColor
+    glScalef, glClearColor, glLineWidth
 import py2d.scenegraph as scenegraph
 from py2d.scenegraph import SceneGraph
 
@@ -17,6 +17,12 @@ class BaseTool(object):
     NAME = "Base"
     def __init__(self, scene):
     	self.scene = scene
+    	
+    def activate(self):
+        return self
+        
+    def deactivate(self):
+        pass
     
     def translateMouseClick(self, x=0, y=0, point=None):
         if point != None:
@@ -53,12 +59,6 @@ class PanTool(BaseTool):
     NAME = "Pan"
     def __init__(self, scene):
     	super(PanTool, self).__init__(scene)
-    	
-    def activate(self):
-        return self
-        
-    def deactivate(self):
-        pass
     
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         if self.scene.graph != None:
@@ -83,12 +83,6 @@ class PlotLineTool(BaseTool):
     
     def __init__(self, scene):
     	super(PlotLineTool, self).__init__(scene)
-    	
-    def activate(self):
-        return self
-        
-    def deactivate(self):
-        pass
     
     def doPreview(self, x2, y2):
         if self.lineStart is None:
@@ -193,21 +187,23 @@ class PlaceItemTool(BaseTool):
             self.preview.visible = False
             
     def key_press(self, symbol, modifiers):
-        print "press"
+        if self.preview is not None:
+            if modifiers & key.MOD_CTRL:
+                if symbol == key.MINUS:
+                    self.preview.scale -= 0.05
+                elif symbol == key.EQUAL:
+                    self.preview.scale += 0.05
+                elif symbol == key.S:
+                    self.preview.rotation += 5
     
     def on_mouse_motion(self, x, y, dx, dy):
         if self.preview is not None and self.active is True:
             self.preview.x, self.preview.y = self.translateMouseClick(x,y)
-            '''self.preview.x = x
-            self.preview.y = y'''
-        
-    def on_mouse_press(self, x, y, button, modifiers):
-        pass
 
     def on_mouse_release(self, x, y, button, modifiers):
         if self.preview is not None and self.active is True:
             x,y = self.translateMouseClick(x,y)
-            self.scene.currentLayer.addItem(self.scene.graph.sourcePath, self.selectedName, (x,y))
+            self.scene.currentLayer.addItem(self.scene.graph.sourcePath, self.selectedName, (x,y), self.preview.scale, self.preview.rotation)
         
         
 '''
@@ -220,12 +216,6 @@ class SelectTool(BaseTool):
     	super(SelectTool, self).__init__(scene)
     	self.window = window
     	self.selectedItem = None
-    
-    def activate(self):
-        return self
-        
-    def deactivate(self):
-        pass
     	
     def on_mouse_motion(self, x, y, dx, dy):
         self.mousePoint = (x, y)
@@ -265,6 +255,62 @@ class Keys(key.KeyStateHandler):
         self.parent.key_release(symbol, modifiers)
         super(Keys, self).on_key_release(symbol, modifiers)
 
+class GridGroup(pyglet.graphics.OrderedGroup):
+    focusX = 0
+    focusY = 0
+    def __init__(self, scene):
+        super(GridGroup, self).__init__(8)
+        self.scene = scene
+        
+    def set_state(self):
+        glLineWidth(1)
+        '''if self.scene.graph is not None:
+            glTranslatef(self.scene.graph.focusX, self.scene.graph.focusY, 0)'''
+        
+    def unset_state(self):
+        '''if self.scene.graph is not None:
+            glTranslatef(-self.scene.graph.focusX, -self.scene.graph.focusY, 0)'''
+        pass
+        
+class Grid(object):
+    def __init__(self, scene, window):
+        self.visible = False
+        self.snap = False
+        self.hSpacing = 50
+        self.vSpacing = 50
+        self.hOffset = 0
+        self.vOffset = 0
+        self.batch = pyglet.graphics.Batch()
+        self.group = GridGroup(scene)
+        self.lines = list()
+        self.window = window
+        
+    def update(self):
+        for line in self.lines:
+            line.delete()
+        self.lines = []
+        if self.visible == True:
+            hCount = self.window.width / self.hSpacing
+            i = 1
+            while i <= hCount:
+                x = (self.hSpacing * i) + self.hOffset
+                y1 = 0
+                y2 = self.window.height
+                self.lines.append(self.batch.add(2, pyglet.gl.GL_LINES, self.group,
+                    ('v2i', (x, y1, x, y2)),
+                    ('c3f', (1.0,1.0,1.0)*2)))
+                i = i + 1
+            vCount = self.window.height / self.vSpacing
+            i = 1
+            while i <= vCount:
+                y = (self.vSpacing * i) + self.vOffset
+                x1 = 0
+                x2 = self.window.width
+                self.lines.append(self.batch.add(2, pyglet.gl.GL_LINES, self.group,
+                    ('v2i', (x1, y, x2, y)),
+                    ('c3f', (1.0,1.0,1.0)*2)))
+                i = i + 1
+
 '''
     class SceneController
     manages editing of the level scene.
@@ -285,12 +331,9 @@ class SceneController(object):
         self.scale = 1.0
         self.keys = Keys(self)
         self.mouseCoord = (0,0)
-        
-        ''' these hold references.
-        '''
+        self.grid = Grid(self, window)
         self.currentLayer = None
         self.currentTool = None
-        
         self.keys = Keys(self)
         window.push_handlers(self)
         window.push_handlers(self.keys)
@@ -319,12 +362,14 @@ class SceneController(object):
         
         
     def newLevel(self, width, height):
-        self.graph = SceneGraph(self.size, width, height, editorMode=True)
+        self.graph = SceneGraph(self.size, width, height, debugMode=True)
         self.graph.forceFocus = True
     
     def loadLevel(self, fileName):
         print "graph loaded"
-        self.graph = SceneGraph.fromMapFile(fileName)
+        #TODO delete old graph and assets
+        #self.graph = SceneGraph.fromMapFile(fileName, self.size)
+        #self.graph.forceFocus = True
             
     def resize(self, width, height):
         self.size = (width, height)
@@ -332,9 +377,6 @@ class SceneController(object):
             self.graph.viewportWidth = width
             self.graph.viewportHeight = height
             
-    def updateGrid(self, values):
-        pass
-    
     def update(self, dt):
         if self.graph:
             self.pollPanKeys(dt)
@@ -346,6 +388,8 @@ class SceneController(object):
             glScalef(self.scale, self.scale, 1.0)
             self.graph.draw()
             glPopMatrix()
+        self.grid.batch.draw()
+            
     
     # input event handlers      
     def pollPanKeys(self, dt):
